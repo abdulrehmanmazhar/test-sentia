@@ -1,5 +1,5 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Question } from "@/types/quiz";
+import React, { useState, useEffect, Suspense, lazy, useMemo } from 'react';
+import { Question, QuestionAttempt } from "@/types/quiz";
 import QuizController from "./QuizController";
 import ProgressBar from "../ProgressBar";
 import QuestionsSidebar from "./QuestionsSidebar";
@@ -41,6 +41,7 @@ interface QuizContentProps {
   isPaused: boolean;
   showExplanation: boolean;
   timerEnabled: boolean;
+  sessionTimeLimit: number;
   timePerQuestion: number;
   isFlagged: boolean;
   onAnswerClick: (index: number) => void;
@@ -50,6 +51,11 @@ interface QuizContentProps {
   onTimeUp: () => void;
   onToggleFlag: () => void;
   onJumpToQuestion: (index: number) => void;
+  questionsWithAttempts?: {
+    question: Question;
+    attempt: QuestionAttempt;
+  }[];  
+  tutorMode: boolean;
 }
 
 const QuestionView = lazy(() => import("./QuestionView"));
@@ -64,6 +70,7 @@ const QuizContent = ({
   isPaused,
   showExplanation,
   timerEnabled,
+  sessionTimeLimit,
   timePerQuestion,
   isFlagged,
   onAnswerClick,
@@ -72,7 +79,9 @@ const QuizContent = ({
   onQuit,
   onTimeUp,
   onToggleFlag,
-  onJumpToQuestion
+  onJumpToQuestion,
+  questionsWithAttempts,
+  tutorMode
 }: QuizContentProps) => {
   const [showQuitDialog, setShowQuitDialog] = React.useState(false);
   const [answeredQuestions, setAnsweredQuestions] = React.useState<Array<{ questionIndex: number; isCorrect: boolean }>>([]);
@@ -122,6 +131,19 @@ const QuizContent = ({
       onAnswerClick(index);
     }
   };
+
+
+const performanceData = useEffect(() => {
+  // return
+   setAnsweredQuestions(questionsWithAttempts?.map((entry, index) => {
+    return {
+      questionIndex: index,
+      isCorrect: entry.attempt?.selectedAnswer === entry.question.correctAnswer
+    };
+  }) || []);
+}, [questionsWithAttempts]);
+
+
 
   const handleQuestionClick = (index: number) => {
     onJumpToQuestion(index);
@@ -240,8 +262,8 @@ const QuizContent = ({
         <QuestionsSidebar
           totalQuestions={totalQuestions}
           currentQuestionIndex={currentQuestionIndex}
-          answeredQuestions={answeredQuestions}
-          onQuestionClick={handleQuestionClick}
+          answeredQuestions={tutorMode? answeredQuestions: []}
+          onQuestionClick={timerEnabled ? ()=>{} : handleQuestionClick}
           currentQuestion={currentQuestion}
           // currentQuestions={currentQuestions}
         />
@@ -273,11 +295,13 @@ const QuizContent = ({
           isPaused={isPaused}
           isFlagged={isFlagged}
           timerEnabled={timerEnabled}
+          sessionTimeLimit={sessionTimeLimit}
           timeLimit={timePerQuestion}
           onTimeUp={onTimeUp}
           onNavigate={onNavigate}
           onPause={onPause}
           onQuit={() => setShowQuitDialog(true)}
+          onForceQuit= {onQuit}
           onToggleFlag={onToggleFlag}
           // onJumpToQuestion={jumpToQuestion}
         />

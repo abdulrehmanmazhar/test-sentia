@@ -20,6 +20,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { resetMetrics } from "@/utils/metricsUtils";
+import { Link } from "react-router-dom";
 
 interface HistoryProps {
   quizHistory: QuizHistory[];
@@ -28,6 +29,7 @@ interface HistoryProps {
 
 const History = ({ quizHistory, onClearHistory }: HistoryProps) => {
   const [showClearDialog, setShowClearDialog] = useState(false);
+
 
   const handleClearConfirm = () => {
     // Reset metrics (but keep flags)
@@ -71,6 +73,7 @@ const History = ({ quizHistory, onClearHistory }: HistoryProps) => {
                 <TableHead className="text-foreground">Question Bank</TableHead>
                 <TableHead className="text-foreground">Score</TableHead>
                 <TableHead className="text-foreground">Percentage</TableHead>
+                <TableHead className="text-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -80,6 +83,7 @@ const History = ({ quizHistory, onClearHistory }: HistoryProps) => {
                   <TableCell className="text-foreground">{quiz.qbankId}</TableCell>
                   <TableCell className="text-foreground">{quiz.score}/{quiz.totalQuestions}</TableCell>
                   <TableCell className="text-foreground">{((quiz.score / quiz.totalQuestions) * 100).toFixed(2)}%</TableCell>
+                  <TableCell className="text-foreground"><Link to={'/session-history'} state={{quiz}}><Button variant="outline" size="icon" className="w-full">View Details</Button></Link></TableCell>
                 </TableRow>
               ))}
             </TableBody>

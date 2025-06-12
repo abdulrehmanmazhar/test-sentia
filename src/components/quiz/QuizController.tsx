@@ -9,11 +9,13 @@ interface QuizControllerProps {
   isPaused: boolean;
   isFlagged: boolean;
   timerEnabled: boolean;
+  sessionTimeLimit: number;
   timeLimit: number;
   onTimeUp: () => void;
   onNavigate: (direction: 'prev' | 'next') => void;
   onPause: () => void;
   onQuit: () => void;
+  onForceQuit: () => void;
   onToggleFlag: () => void;
   // onJumpToQuestion: (index: number) => void;
 }
@@ -25,11 +27,13 @@ const QuizController = ({
   isPaused,
   isFlagged,
   timerEnabled,
+  sessionTimeLimit,
   timeLimit,
   onTimeUp,
   onNavigate,
   onPause,
   onQuit,
+  onForceQuit,
   onToggleFlag,
   // onJumpToQuestion
 }: QuizControllerProps) => {
@@ -37,12 +41,17 @@ const QuizController = ({
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
       <div className="container mx-auto flex items-center justify-between">
         <div className="w-32">
-          {timerEnabled && (
+          {(timerEnabled || sessionTimeLimit > 0) && (
+            <>
+            {/* {console.log(timerEnabled, sessionTimeLimit)} */}
             <Timer
-              timeLimit={timeLimit}
+              timeLimit={timerEnabled ? timeLimit : undefined}
+              sessionTimeLimit = {sessionTimeLimit}
               isPaused={isPaused}
               onTimeUp={onTimeUp}
-            />
+              onQuit={onForceQuit}
+              />
+              </>
           )}
         </div>
         

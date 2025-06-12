@@ -418,6 +418,7 @@ export const useQuiz = ({ onQuizComplete, onQuizStart, onQuizEnd }: UseQuizProps
   };
 
   const handleJumpToQuestion = (questionIndex: number) => {
+    if(state.timerEnabled) return ;
     if (questionIndex >= 0 && questionIndex < state.currentQuestions.length) {
       setState(prevState => ({
         ...prevState,
@@ -634,6 +635,37 @@ export const useQuiz = ({ onQuizComplete, onQuizStart, onQuizEnd }: UseQuizProps
     });
   };
 
+  const handleReviewHistory = (historyData: any[]) => {
+    const questionsWithAttempts = historyData.map(item => {
+      const { question, attempt } = item;
+      return {
+        ...question,
+        attempts: [attempt]
+      };
+    });
+  
+    setState({
+      currentQuestionIndex: 0,
+      score: historyData.filter(item => item.attempt.isCorrect).length,
+      showScore: false,
+      selectedAnswer: null,
+      isAnswered: false,
+      inQuiz: true,
+      currentQuestions: questionsWithAttempts,
+      tutorMode: true, // allow explanation in review
+      showExplanation: true,
+      isPaused: false,
+      timerEnabled: false,
+      timePerQuestion: 0,
+      initialTimeLimit: 0,
+      quizStartTime: new Date().toISOString(),
+      questionAttempts: historyData.map(item => item.attempt)
+    });
+  
+    onQuizStart?.(); // optional
+  };
+  
+
   return {
     currentQuestionIndex: state.currentQuestionIndex,
     score: state.score,
@@ -657,6 +689,7 @@ export const useQuiz = ({ onQuizComplete, onQuizStart, onQuizEnd }: UseQuizProps
     handleRestart,
     handleQuizNavigation,
     handleToggleFlag,
-    jumpToQuestion: handleJumpToQuestion
+    jumpToQuestion: handleJumpToQuestion,
+    handleReviewHistory
   };
 };

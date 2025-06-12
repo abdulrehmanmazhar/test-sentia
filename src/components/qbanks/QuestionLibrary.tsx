@@ -336,113 +336,146 @@ const QuestionLibrary = ({ qbanks }: QuestionLibraryProps) => {
     setForceUpdate(f => f + 1);
   };
 
+
+  const checkForDuplicates = (questionText: string, tags: string[]): { isDuplicate: boolean, existingQBanks: string[] } => {
+    const normalizedQuestion = questionText.trim().toLowerCase();
+    const existingQBanks: string[] = [];
+    
+    // Check across all qbanks
+    const isDuplicate = qbanks.some(qbank => {
+      const hasDuplicate = qbank.questions.some(
+        q => q.question.trim().toLowerCase() === normalizedQuestion
+      );
+      if (hasDuplicate) return true;
+      
+      // Track which tags already have qbanks
+      if (tags.includes(qbank.id)) {
+        existingQBanks.push(qbank.id);
+      }
+      return false;
+    });
+  
+    return { isDuplicate, existingQBanks };
+  };
+  
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     event.preventDefault();
     event.stopPropagation();
     const file = event.target.files?.[0];
     if (!file) return;
-
+  
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
+        // Load fresh data (though qbanks is already loaded globally)
+        const currentQBanks = [...qbanks]; // Create working copy
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
-
-        const questions = rows.slice(1)
-          .filter(row => row && row.length >= 2)
-          .map((row: any) => {
-            const [question, correctAnswer, otherChoices, category, explanation] = row;
-
-            // Modified tag handling to support semicolon-separated tags
-            let tags: string[] = ['general'];
-            if (category?.toString().trim()) {
-              // Split by semicolons, convert to lowercase, trim whitespace, and filter out empty tags
-              tags = category.toString()
+  
+        let newQuestions = 0;
+        let duplicateQuestions = 0;
+        let updatedQBanks = new Set<string>();
+  
+        rows.slice(1).forEach((row: any) => {
+          if (!row || row.length < 2) return;
+  
+          const [question, correctAnswer, otherChoices, category, explanation] = row;
+          const questionText = question.toString().trim();
+  
+          // Process tags
+          let tags: string[] = category?.toString().trim()
+            ? category.toString()
                 .split(';')
                 .map(tag => tag.toLowerCase().trim())
-                .filter(Boolean);
-
-              // If after filtering we have no valid tags, use 'general'
-              if (tags.length === 0) {
-                tags = ['general'];
-              }
-            }
-
-            const questionText = question.toString().trim();
-            const explanationText = explanation?.toString().trim() || undefined;
-
-            const options = [
+                .filter(Boolean)
+            : ['general'];
+          if (tags.length === 0) tags = ['general'];
+  
+          // Check for duplicates
+          const { isDuplicate, existingQBanks } = checkForDuplicates(questionText, tags);
+          if (isDuplicate) {
+            duplicateQuestions++;
+            return;
+          }
+  
+          // Track updated qbanks
+          existingQBanks.forEach(tag => updatedQBanks.add(tag));
+  
+          // Create question
+          const newQuestion: Question = {
+            id: Date.now() + Math.random(), // Improved ID generation
+            question: questionText,
+            options: [
               correctAnswer.toString().trim(),
               ...(otherChoices?.toString().split(/[;,]/).map(s => s.trim()) || [])
-            ].filter(Boolean);
-
-            const mediaMatch = questionText.match(/\/([^\/\s]+\.(png|jpg|jpeg|gif))/i);
-            const media = mediaMatch ? {
-              type: "image" as const,
-              url: mediaMatch[1],
-              showWith: "question" as const
-            } : undefined;
-
-            const newQuestion: Question = {
-              id: Date.now() + Math.random(),
-              question: questionText,
-              options,
-              correctAnswer: 0,
-              qbankId: tags[0],
-              tags,
-              explanation: explanationText,
-              media,
-              attempts: []
-            };
-
-            // Add the question to all relevant qbanks based on tags
-            tags.forEach(tag => {
-              let qbank = qbanks.find(qb => qb.id === tag);
-              if (!qbank) {
-                qbank = {
-                  id: tag,
-                  name: tag.charAt(0).toUpperCase() + tag.slice(1),
-                  description: `Questions tagged with ${tag}`,
-                  questions: []
-                };
-                qbanks.push(qbank);
-              }
-              qbank.questions.push({ ...newQuestion });
-            });
-
-            return newQuestion;
+            ].filter(Boolean),
+            correctAnswer: 0,
+            qbankId: tags[0],
+            tags,
+            explanation: explanation?.toString().trim() || undefined,
+            media: questionText.match(/\/([^\/\s]+\.(png|jpg|jpeg|gif))/i) 
+              ? { type: "image", url: RegExp.$1, showWith: "question" } 
+              : undefined,
+            attempts: []
+          };
+  
+          // Add to qbanks
+          tags.forEach(tag => {
+            let qbank = currentQBanks.find(qb => qb.id === tag);
+            if (!qbank) {
+              qbank = {
+                id: tag,
+                name: tag.charAt(0).toUpperCase() + tag.slice(1),
+                description: `Questions tagged with ${tag}`,
+                questions: []
+              };
+              currentQBanks.push(qbank);
+            }
+            qbank.questions.push(newQuestion);
           });
-
-        saveQBanksToStorage();
-        console.log('Imported questions and saved qbanks:', qbanks.length);
-
-        toast({
-          title: "Success",
-          description: `${questions.length} questions imported successfully`,
+  
+          newQuestions++;
         });
-
+  
+        // Update global qbanks reference
+        qbanks = currentQBanks;
+        
+        // Persist changes
+        if (newQuestions > 0) {
+          saveQBanksToStorage();
+        }
+  
+        // Show results
+        toast({
+          title: "Import Complete",
+          description: [
+            `Added ${newQuestions} new questions`,
+            duplicateQuestions > 0 && `Skipped ${duplicateQuestions} duplicates`,
+            updatedQBanks.size > 0 && `Updated ${updatedQBanks.size} qbanks`
+          ].filter(Boolean).join(" | "),
+        });
+  
         setForceUpdate(f => f + 1);
       } catch (error) {
-        console.error('Excel import error:', error);
+        console.error('Import failed:', error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to import questions",
+          description: error instanceof Error ? error.message : "Import failed",
           variant: "destructive"
         });
       }
     };
-
+  
     reader.onerror = () => {
       toast({
-        title: "Error",
-        description: "Failed to read Excel file",
+        title: "File Error",
+        description: "Could not read the uploaded file",
         variant: "destructive"
       });
     };
-
+  
     reader.readAsArrayBuffer(file);
     event.target.value = '';
   };

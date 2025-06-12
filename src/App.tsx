@@ -19,6 +19,7 @@ import QuestionLibrary from "@/components/qbanks/QuestionLibrary";
 import MediaLibrary from "@/components/qbanks/MediaLibrary";
 import { useMetricsInit } from './hooks/use-metrics-init';
 import { initializeMetrics } from "@/utils/metricsUtils";
+import SessionDetail from "./pages/SessionDetail";
 
 const queryClient = new QueryClient();
 
@@ -161,6 +162,8 @@ const App = () => {
                       path="/history"
                       element={<History quizHistory={quizHistory} onClearHistory={handleClearHistory} />}
                     />
+                    <Route path="/session-history" element={<SessionDetail                           onQuizStart={()=>setInQuiz(true)}
+                          onQuizEnd={()=>setInQuiz(false)}/>} />
                     <Route path="/qbanks" element={<QBanks qbanks={qbanks} />} />
                     <Route path="/qbanks/questions" element={<QuestionLibrary qbanks={qbanks} />} />
                     <Route path="/qbanks/media" element={<MediaLibrary qbanks={qbanks} />} />

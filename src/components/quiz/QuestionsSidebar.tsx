@@ -55,6 +55,7 @@ const QuestionsSidebar = ({
       setFlaggedQuestions(flaggedState);
     }
   }, [currentQuestions]);
+
   
   return (
     <div className="fixed left-0 top-0 h-full w-[160px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg">

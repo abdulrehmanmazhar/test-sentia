@@ -27,15 +27,19 @@ interface DashboardProps {
     timeLimit: number,
     filteredQuestionIds?: number[] // Add this parameter
   ) => void;
+  timeLimitMin: number;
+  setTimeLimitMin: (timeLimitMin: number) => void;
 }
 
-const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
+const Dashboard = ({ qbanks, quizHistory, onStartQuiz, timeLimitMin, setTimeLimitMin }: DashboardProps) => {
   const navigate = useNavigate();
   const [selectedQBank, setSelectedQBank] = useState<QBank | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(40);
   const [tutorMode, setTutorMode] = useState(false);
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timeLimit, setTimeLimit] = useState(60);
+  // const [timeLimitMin, setTimeLimitMin] = useState(60);
+  const [majorTimerToggle, setMajorTimerToggle] = useState(false);
   const [filters, setFilters] = useState<QuestionFilter>({
     unused: false,
     used: false,
@@ -49,18 +53,16 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   useEffect(() => {
-    const storedQBank = localStorage.getItem('selectedQBank');
+    const storedQBank = localStorage.getItem("selectedQBank");
     if (storedQBank) {
       const qbankData = JSON.parse(storedQBank);
-      const foundQBank = qbanks.find(qb => qb.id === qbankData.id);
+      const foundQBank = qbanks.find((qb) => qb.id === qbankData.id);
       if (foundQBank) {
         // setSelectedQBank(foundQBank);
         setSelectedQBank(qbankData);
       }
     }
   }, [qbanks]);
-  
-
 
   // useEffect(() => {
   //   const storedQBank = localStorage.getItem('selectedQBank');
@@ -128,8 +130,8 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
     const omittedQuestionIds = new Set<number>();
     const flaggedQuestionIds = new Set<number>();
 
-    quizHistory.forEach(quiz => {
-      quiz.questionAttempts.forEach(attempt => {
+    quizHistory.forEach((quiz) => {
+      quiz.questionAttempts.forEach((attempt) => {
         seenQuestionIds.add(attempt.questionId);
 
         if (attempt.selectedAnswer === null) {
@@ -143,16 +145,18 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
       });
     });
 
-    qbanks.forEach(qbank => {
-      qbank.questions.forEach(question => {
+    qbanks.forEach((qbank) => {
+      qbank.questions.forEach((question) => {
         if (question.isFlagged) {
           flaggedQuestionIds.add(question.id);
         }
       });
     });
 
-    const totalQuestions = qbanks.reduce((acc, qbank) =>
-      acc + qbank.questions.length, 0);
+    const totalQuestions = qbanks.reduce(
+      (acc, qbank) => acc + qbank.questions.length,
+      0
+    );
 
     const unusedCount = totalQuestions - seenQuestionIds.size;
 
@@ -170,100 +174,132 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
     return calculateOverallAccuracy();
   }, [calculateOverallAccuracy, quizHistory]);
 
-  const chartData = useMemo(() =>
-    quizHistory.map((quiz, index) => ({
-      attemptNumber: index + 1,
-      score: (quiz.score / quiz.totalQuestions) * 100,
-      date: quiz.date,
-    })), [quizHistory]);
+  const chartData = useMemo(
+    () =>
+      quizHistory.map((quiz, index) => ({
+        attemptNumber: index + 1,
+        score: (quiz.score / quiz.totalQuestions) * 100,
+        date: quiz.date,
+      })),
+    [quizHistory]
+  );
 
-    // const filteredQuestions = useMemo(() => {
-    //   if (!selectedQBank) return [];
+  // const filteredQuestions = useMemo(() => {
+  //   if (!selectedQBank) return [];
 
-    //   return selectedQBank.questions.filter(question => {
-    //     // If no filters are active, return all questions
-    //     if (!Object.values(filters).some(v => v)) return true;
+  //   return selectedQBank.questions.filter(question => {
+  //     // If no filters are active, return all questions
+  //     if (!Object.values(filters).some(v => v)) return true;
 
-    //     const hasBeenAttempted = question.attempts && question.attempts.length > 0;
-    //     const lastAttempt = hasBeenAttempted ? question.attempts[question.attempts.length - 1] : null;
+  //     const hasBeenAttempted = question.attempts && question.attempts.length > 0;
+  //     const lastAttempt = hasBeenAttempted ? question.attempts[question.attempts.length - 1] : null;
 
-    //     return (
-    //       (filters.unused && !hasBeenAttempted) ||
-    //       (filters.used && hasBeenAttempted) ||
-    //       (filters.correct && lastAttempt?.isCorrect) ||
-    //       (filters.incorrect && lastAttempt && !lastAttempt.isCorrect) ||
-    //       (filters.flagged && question.isFlagged) ||
-    //       (filters.omitted && lastAttempt?.selectedAnswer === null)
-    //     );
-    //   });
-    // }, [selectedQBank, filters]);
+  //     return (
+  //       (filters.unused && !hasBeenAttempted) ||
+  //       (filters.used && hasBeenAttempted) ||
+  //       (filters.correct && lastAttempt?.isCorrect) ||
+  //       (filters.incorrect && lastAttempt && !lastAttempt.isCorrect) ||
+  //       (filters.flagged && question.isFlagged) ||
+  //       (filters.omitted && lastAttempt?.selectedAnswer === null)
+  //     );
+  //   });
+  // }, [selectedQBank, filters]);
 
-    const filteredQuestions = selectedQBank?.questions || [];
-    console.log(filteredQuestions.length)
-    const handleStartQuiz = () => {
-      if (selectedQBank && questionCount > 0) {
-        // Make sure we have filtered questions
-        if (filteredQuestions.length === 0) {
-          toast({
-            title: "No Questions Available",
-            description: "There are no questions available with the current filters.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Log for debugging
-        console.log(`Starting quiz with ${filteredQuestions.length} filtered questions`);
-        console.log("Active filters:", Object.entries(filters)
-          .filter(([_, isActive]) => isActive)
-          .map(([key]) => key));
-
-        // Pass only the filtered question IDs to the quiz
-        onStartQuiz(
-          selectedQBank.id,
-          Math.min(questionCount, filteredQuestions.length),
-          tutorMode,
-          timerEnabled,
-          timeLimit,
-          filteredQuestions.map(q => q.id)
-        );
+  const filteredQuestions = selectedQBank?.questions || [];
+  console.log(filteredQuestions.length);
+  const handleStartQuiz = () => {
+    if (selectedQBank && questionCount > 0) {
+      // Make sure we have filtered questions
+      if (filteredQuestions.length === 0) {
+        toast({
+          title: "No Questions Available",
+          description:
+            "There are no questions available with the current filters.",
+          variant: "destructive",
+        });
+        return;
       }
-    };
+
+      // Log for debugging
+      console.log(
+        `Starting quiz with ${filteredQuestions.length} filtered questions`
+      );
+      console.log(
+        "Active filters:",
+        Object.entries(filters)
+          .filter(([_, isActive]) => isActive)
+          .map(([key]) => key)
+      );
+
+      // Pass only the filtered question IDs to the quiz
+      onStartQuiz(
+        selectedQBank.id,
+        Math.min(questionCount, filteredQuestions.length),
+        tutorMode,
+        timerEnabled,
+        timeLimit,
+        filteredQuestions.map((q) => q.id)
+      );
+    }
+  };
 
   const toggleFilter = (key: keyof QuestionFilter) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key],
     }));
   };
 
   const handleQBankSelection = () => {
-    navigate('/select-qbank');
+    navigate("/select-qbank");
   };
 
   const handleUnlockQBank = () => {
     setSelectedQBank(null);
-    localStorage.removeItem('selectedQBank');
+    localStorage.removeItem("selectedQBank");
   };
 
-  const totalAttempts = useMemo(() => quizHistory.reduce((acc, quiz) => acc + quiz.questionAttempts.length, 0), [quizHistory]);
-  const correctAttempts = useMemo(() => quizHistory.reduce((acc, quiz) =>
-    acc + quiz.questionAttempts.filter(a => a.isCorrect).length, 0), [quizHistory]);
+  const totalAttempts = useMemo(
+    () =>
+      quizHistory.reduce((acc, quiz) => acc + quiz.questionAttempts.length, 0),
+    [quizHistory]
+  );
+  const correctAttempts = useMemo(
+    () =>
+      quizHistory.reduce(
+        (acc, quiz) =>
+          acc + quiz.questionAttempts.filter((a) => a.isCorrect).length,
+        0
+      ),
+    [quizHistory]
+  );
 
-  const totalQuestions = useMemo(() => qbanks.reduce((acc, qbank) => acc + qbank.questions.length, 0), [qbanks]);
-  const questionsAttempted = useMemo(() => new Set(quizHistory.flatMap(quiz =>
-    quiz.questionAttempts.map(a => a.questionId)
-  )).size, [quizHistory]);
+  const totalQuestions = useMemo(
+    () => qbanks.reduce((acc, qbank) => acc + qbank.questions.length, 0),
+    [qbanks]
+  );
+  const questionsAttempted = useMemo(
+    () =>
+      new Set(
+        quizHistory.flatMap((quiz) =>
+          quiz.questionAttempts.map((a) => a.questionId)
+        )
+      ).size,
+    [quizHistory]
+  );
 
   const tagStats = useMemo(() => {
     const stats: { [key: string]: { correct: number; total: number } } = {};
-    quizHistory.forEach(quiz => {
-      quiz.questionAttempts.forEach(attempt => {
-        const question = qbanks.find(qbank => qbank.questions.find(q => q.id === attempt.questionId))
-          ?.questions.find(q => q.id === attempt.questionId);
+    quizHistory.forEach((quiz) => {
+      quiz.questionAttempts.forEach((attempt) => {
+        const question = qbanks
+          .find((qbank) =>
+            qbank.questions.find((q) => q.id === attempt.questionId)
+          )
+          ?.questions.find((q) => q.id === attempt.questionId);
         const tags = question?.tags || [];
 
-        tags.forEach(tag => {
+        tags.forEach((tag) => {
           if (!stats[tag]) stats[tag] = { correct: 0, total: 0 };
           stats[tag].total += 1;
           if (attempt.isCorrect) stats[tag].correct += 1;
@@ -277,24 +313,24 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
     const tagStats: { [key: string]: { correct: number; total: number } } = {};
 
     const uniqueTags = new Set<string>();
-    qbanks.forEach(qbank => {
-      qbank.questions.forEach(question => {
-        question.tags.forEach(tag => uniqueTags.add(tag));
+    qbanks.forEach((qbank) => {
+      qbank.questions.forEach((question) => {
+        question.tags.forEach((tag) => uniqueTags.add(tag));
       });
     });
 
-    uniqueTags.forEach(tag => {
+    uniqueTags.forEach((tag) => {
       tagStats[tag] = { correct: 0, total: 0 };
     });
 
-    quizHistory.forEach(quiz => {
-      quiz.questionAttempts.forEach(attempt => {
+    quizHistory.forEach((quiz) => {
+      quiz.questionAttempts.forEach((attempt) => {
         const question = qbanks
-          .flatMap(qbank => qbank.questions)
-          .find(q => q.id === attempt.questionId);
+          .flatMap((qbank) => qbank.questions)
+          .find((q) => q.id === attempt.questionId);
 
         if (question) {
-          question.tags.forEach(tag => {
+          question.tags.forEach((tag) => {
             tagStats[tag].total += 1;
             if (attempt.isCorrect) {
               tagStats[tag].correct += 1;
@@ -314,9 +350,15 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
       }));
   }, [qbanks, quizHistory]);
 
-  const overallAccuracyCalc = useMemo(() => totalAttempts > 0 ? (correctAttempts / totalAttempts) * 100 : 0, [correctAttempts, totalAttempts]);
-  const completionRate = useMemo(() => totalQuestions > 0 ? (questionsAttempted / totalQuestions) * 100 : 0, [questionsAttempted, totalQuestions]);
-
+  const overallAccuracyCalc = useMemo(
+    () => (totalAttempts > 0 ? (correctAttempts / totalAttempts) * 100 : 0),
+    [correctAttempts, totalAttempts]
+  );
+  const completionRate = useMemo(
+    () =>
+      totalQuestions > 0 ? (questionsAttempted / totalQuestions) * 100 : 0,
+    [questionsAttempted, totalQuestions]
+  );
 
   useEffect(() => {
     if (selectedQBank) {
@@ -376,7 +418,9 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
           <div className="grid gap-4">
             <Card
               className={`p-4 cursor-pointer transition-colors ${
-                selectedQBank ? "border-primary border-2" : "hover:border-primary/50"
+                selectedQBank
+                  ? "border-primary border-2"
+                  : "hover:border-primary/50"
               }`}
               onClick={selectedQBank ? handleUnlockQBank : handleQBankSelection}
               onDoubleClick={selectedQBank ? handleUnlockQBank : undefined}
@@ -404,7 +448,7 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
         >
           <h2 className="text-xl font-bold">Quiz Configuration</h2>
           <div className="space-y-4">
-          {/* <div>
+            {/* <div>
             <Label className="block text-sm font-medium mb-2">
               Number of Questions (max: {filteredQuestions.length})
             </Label>
@@ -421,24 +465,31 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
               className="w-48"
             />
           </div> */}
-          <div>
-            <Label className="block text-sm font-medium mb-2">
-              Number of Questions ({filteredQuestions.length} available)
-            </Label>
-            <Input
-              type="number"
-              min={1}
-              max={filteredQuestions.length || 1}
-              value={questionCount > filteredQuestions.length ? filteredQuestions.length : questionCount}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                const validValue = Math.min(Math.max(1, value), filteredQuestions.length);
-                setQuestionCount(validValue);
-              }}
-              className="w-48"
-              disabled={filteredQuestions.length === 0}
-            />
-          </div>
+            <div>
+              <Label className="block text-sm font-medium mb-2">
+                Number of Questions ({filteredQuestions.length} available)
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                max={filteredQuestions.length || 1}
+                value={
+                  questionCount > filteredQuestions.length
+                    ? filteredQuestions.length
+                    : questionCount
+                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  const validValue = Math.min(
+                    Math.max(1, value),
+                    filteredQuestions.length
+                  );
+                  setQuestionCount(validValue);
+                }}
+                className="w-48"
+                disabled={filteredQuestions.length === 0}
+              />
+            </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="tutor-mode"
@@ -451,12 +502,12 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
               <div className="flex items-center space-x-2">
                 <Switch
                   id="timer-mode"
-                  checked={timerEnabled}
-                  onCheckedChange={setTimerEnabled}
+                  checked={majorTimerToggle}
+                  onCheckedChange={setMajorTimerToggle}
                 />
                 <Label htmlFor="timer-mode">Enable Timer</Label>
               </div>
-              {timerEnabled && (
+              {/* {timerEnabled && (
                 <div className="space-y-2">
                   <Label>Time per Question (seconds): {timeLimit}</Label>
                   <Slider
@@ -468,6 +519,50 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
                     className="w-full"
                   />
                 </div>
+              )} */}
+              {majorTimerToggle && (
+                <>
+                <div className="space-y-2">
+                    <Label>Time per Session (minutes): {timeLimitMin}</Label>
+                    <Slider
+                      value={[timeLimitMin]}
+                      onValueChange={(value) => setTimeLimitMin(value[0])}
+                      min={10}
+                      max={300}
+                      step={5}
+                      className="w-full"
+                    />
+                  </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="per-question-timer"
+                      checked={timerEnabled}
+                      onCheckedChange={setTimerEnabled}
+                    />
+                    <Label htmlFor="custom-question-timer">
+                      Enable Per-Question Timer
+                    </Label>
+                  </div>
+                  <div
+                      className={`${
+                        timerEnabled
+                          ? ""
+                          : "opacity-50 pointer-events-none"
+                      } space-y-2`}
+                    >
+                  <Label>Time per Question (seconds): {timeLimit}</Label>
+                  <Slider
+                    value={[timeLimit]}
+                    onValueChange={(value) => setTimeLimit(value[0])}
+                    min={10}
+                    max={300}
+                    step={10}
+                    className="w-full"
+                  />
+                  </div>
+                </div>
+                </>
               )}
             </div>
             <Button
@@ -486,11 +581,15 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz }: DashboardProps) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-2">Overall Accuracy</h3>
-            <p className="text-2xl font-bold">{overallAccuracyCalc.toFixed(1)}%</p>
+            <p className="text-2xl font-bold">
+              {overallAccuracyCalc.toFixed(1)}%
+            </p>
           </Card>
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-2">Questions Attempted</h3>
-            <p className="text-2xl font-bold">{questionsAttempted} / {totalQuestions}</p>
+            <p className="text-2xl font-bold">
+              {questionsAttempted} / {totalQuestions}
+            </p>
           </Card>
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-2">Total Quizzes Taken</h3>
