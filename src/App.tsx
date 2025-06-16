@@ -63,7 +63,24 @@ const App = () => {
     }
   }, [quizHistory]);
 
-  const handleQuizComplete = (history: QuizHistory) => {
+  const handleQuizComplete = (historyWithShuffling: QuizHistory) => {
+    // pushing to history with correct index as stored in questionLibrary 
+    const history = {
+      ...historyWithShuffling,
+      questionAttempts: historyWithShuffling.questionAttempts.map(q => {
+        const selectedOptionText = q.options?.[q.selectedAnswer];
+        const originalIndex = selectedOptionText != null
+          ? q.originalOptions.findIndex(opt => opt === selectedOptionText)
+          : null;
+    
+        return {
+          ...q,
+          selectedAnswer: originalIndex
+        };
+      })
+    };
+    
+    console.log(history);
     // Update quiz history
     setQuizHistory((prev) => [...prev, history]);
 
@@ -73,11 +90,15 @@ const App = () => {
       history.questionAttempts.forEach(attempt => {
         const question = selectedQBank.questions.find(q => q.id === attempt.questionId);
         if (question) {
+          console.log(attempt.selectedAnswer);
+          // console.log(attempt.originalOptions.indexOf(attempt.options[attempt.selectedAnswer]));
+          
           question.attempts = [
             ...(question.attempts || []),
             {
               questionId: attempt.questionId,
               selectedAnswer: attempt.selectedAnswer,
+              // selectedAnswer: question.options.indexOf(attempt.options[attempt.selectedAnswer]),
               isCorrect: attempt.isCorrect,
               date: new Date().toISOString(),
               isFlagged: attempt.isFlagged,
@@ -89,7 +110,7 @@ const App = () => {
 
       // Save updated qbank to localStorage
       // localStorage.setItem('selectedQBank', JSON.stringify(selectedQBank));
-      // saveQBanksToStorage(); // Save qbanks to localStorage as well
+      saveQBanksToStorage(); // Save qbanks to localStorage as well
       initializeMetrics(); // Recalculate metrics so the logic bar updates
     }
     // console.log(history);

@@ -138,6 +138,7 @@ function SessionDetail({onQuizStart, onQuizEnd}:SessionDetailProps) {
   const navigation = useNavigate();
   const quiz = location.state?.quiz;
 
+
   const hasInitializedReview = useRef(false);
 
   const questionLibrary = useMemo(() => {
@@ -153,21 +154,38 @@ function SessionDetail({onQuizStart, onQuizEnd}:SessionDetailProps) {
     return quiz?.questionAttempts?.map((q) => q.questionId) || [];
   }, [quiz]);
 
+
   const questionsWithAttempts = useMemo(() => {
     if (!questionLibrary.length || !quiz?.questionAttempts) return [];
 
     const attemptMap = new Map(
       quiz.questionAttempts.map((attempt) => [attempt.questionId, attempt])
     );
+  console.log(attemptMap)
+
+    // return questionLibrary
+    //   .flatMap((tag) => tag.questions)
+    //   // add a duplicate checking filter as well so that 
+    //   .filter((question) => questionIdInQuiz.includes(question.id))
+    //   .map((question) => ({
+    //     question,
+    //     attempt: attemptMap.get(question.id),
+    //   }));
 
     return questionLibrary
-      .flatMap((tag) => tag.questions)
-      .filter((question) => questionIdInQuiz.includes(question.id))
-      .map((question) => ({
-        question,
-        attempt: attemptMap.get(question.id),
-      }));
+  .flatMap((tag) => tag.questions)
+  .filter((question, index, self) => {
+    // Keep only the first occurrence of each question.id
+    return index === self.findIndex(q => q.id === question.id);
+  })
+  .filter((question) => questionIdInQuiz.includes(question.id))
+  .map((question) => ({
+    question,
+    attempt: attemptMap.get(question.id),
+  }));
+
   }, [questionLibrary, quiz, questionIdInQuiz]);
+
 
   // useEffect(() => {
   //   if (questionsWithAttempts.length > 0 && !hasInitializedReview.current) {
@@ -214,7 +232,7 @@ function SessionDetail({onQuizStart, onQuizEnd}:SessionDetailProps) {
   // }, [questionsWithAttempts, quiz]);
   
 
-  if (!quiz) {
+  if (!questionsWithAttempts) {
     return <div className="p-6 text-red-600">No quiz data found.</div>;
   }
 
@@ -260,7 +278,7 @@ function SessionDetail({onQuizStart, onQuizEnd}:SessionDetailProps) {
       else reviewHook.goToPrev();
     }}
     onPause={() => {}}
-    onQuit={() => {navigation("/"); onQuizEnd()}}
+    onQuit={() => {navigation("/history"); onQuizEnd()}}
     onTimeUp={() => {}}
     onToggleFlag={() => {}}
     onJumpToQuestion={reviewHook.jumpTo}
@@ -268,7 +286,7 @@ function SessionDetail({onQuizStart, onQuizEnd}:SessionDetailProps) {
     tutorMode={true}
   />
       ) : (
-        <div className="p-6">Review mode UI goes here</div>
+        <div className="p-6 text-red-600">No quiz data found.</div>
       )}
     </>
   );

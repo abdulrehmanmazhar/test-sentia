@@ -72,6 +72,8 @@ export const createQuizHistory = (
       return {
         questionId: q.id,
         selectedAnswer,
+        options: q.options,
+        originalOptions: q.originalOptions,
         isCorrect,
         isFlagged: Boolean(q.isFlagged),
         tags: q.tags,

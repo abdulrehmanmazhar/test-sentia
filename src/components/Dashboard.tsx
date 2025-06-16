@@ -29,17 +29,29 @@ interface DashboardProps {
   ) => void;
   timeLimitMin: number;
   setTimeLimitMin: (timeLimitMin: number) => void;
+  sessionTimerToggle: boolean;
+  setSessionTimerToggle: (boolean )=> void;
 }
 
-const Dashboard = ({ qbanks, quizHistory, onStartQuiz, timeLimitMin, setTimeLimitMin }: DashboardProps) => {
+const Dashboard = ({
+  qbanks,
+  quizHistory,
+  onStartQuiz,
+  timeLimitMin,
+  setTimeLimitMin,
+  sessionTimerToggle,
+  setSessionTimerToggle
+}: DashboardProps) => {
   const navigate = useNavigate();
   const [selectedQBank, setSelectedQBank] = useState<QBank | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(40);
   const [tutorMode, setTutorMode] = useState(false);
+  // const [strictMode, setStrictMode] = useState(false);
   const [timerEnabled, setTimerEnabled] = useState(false);
-  const [timeLimit, setTimeLimit] = useState(60);
+  const [timeLimit, setTimeLimit] = useState(10);
   // const [timeLimitMin, setTimeLimitMin] = useState(60);
   const [majorTimerToggle, setMajorTimerToggle] = useState(false);
+  // const [sessionTimerToggle, setSessionTimerToggle] = useState(false);
   const [filters, setFilters] = useState<QuestionFilter>({
     unused: false,
     used: false,
@@ -207,6 +219,7 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz, timeLimitMin, setTimeLimi
 
   const filteredQuestions = selectedQBank?.questions || [];
   console.log(filteredQuestions.length);
+
   const handleStartQuiz = () => {
     if (selectedQBank && questionCount > 0) {
       // Make sure we have filtered questions
@@ -490,6 +503,14 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz, timeLimitMin, setTimeLimi
                 disabled={filteredQuestions.length === 0}
               />
             </div>
+            {/* <div className="flex items-center space-x-2">
+              <Switch
+                id="strict-mode"
+                checked={strictMode}
+                onCheckedChange={setStrictMode}
+              />
+              <Label htmlFor="tutor-mode">Enable Strict Mode</Label>
+            </div> */}
             <div className="flex items-center space-x-2">
               <Switch
                 id="tutor-mode"
@@ -499,14 +520,14 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz, timeLimitMin, setTimeLimi
               <Label htmlFor="tutor-mode">Enable Tutor Mode</Label>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <Switch
                   id="timer-mode"
                   checked={majorTimerToggle}
                   onCheckedChange={setMajorTimerToggle}
                 />
                 <Label htmlFor="timer-mode">Enable Timer</Label>
-              </div>
+              </div> */}
               {/* {timerEnabled && (
                 <div className="space-y-2">
                   <Label>Time per Question (seconds): {timeLimit}</Label>
@@ -520,50 +541,69 @@ const Dashboard = ({ qbanks, quizHistory, onStartQuiz, timeLimitMin, setTimeLimi
                   />
                 </div>
               )} */}
-              {majorTimerToggle && (
+              {/* {majorTimerToggle && ( */}
                 <>
-                <div className="space-y-2">
-                    <Label>Time per Session (minutes): {timeLimitMin}</Label>
-                    <Slider
-                      value={[timeLimitMin]}
-                      onValueChange={(value) => setTimeLimitMin(value[0])}
-                      min={10}
-                      max={300}
-                      step={5}
-                      className="w-full"
-                    />
-                  </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="per-question-timer"
-                      checked={timerEnabled}
-                      onCheckedChange={setTimerEnabled}
-                    />
-                    <Label htmlFor="custom-question-timer">
-                      Enable Per-Question Timer
-                    </Label>
-                  </div>
-                  <div
+                  {/* Session Timer Toggle */}
+                  <div className="space-y-2 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="session-timer"
+                        checked={sessionTimerToggle}
+                        onCheckedChange={setSessionTimerToggle}
+                      />
+                      <Label htmlFor="session-timer">
+                        Enable Session Timer
+                      </Label>
+                    </div>
+                    <div
                       className={`${
-                        timerEnabled
+                        sessionTimerToggle
                           ? ""
                           : "opacity-50 pointer-events-none"
                       } space-y-2`}
                     >
-                  <Label>Time per Question (seconds): {timeLimit}</Label>
-                  <Slider
-                    value={[timeLimit]}
-                    onValueChange={(value) => setTimeLimit(value[0])}
-                    min={10}
-                    max={300}
-                    step={10}
-                    className="w-full"
-                  />
+                      <Label>Time per Session (minutes): {timeLimitMin}</Label>
+                      <Slider
+                        value={[timeLimitMin]}
+                        onValueChange={(value) => setTimeLimitMin(value[0])}
+                        min={5}
+                        max={300}
+                        step={5}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  {/* Per-Question Timer Toggle */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="per-question-timer"
+                        checked={timerEnabled}
+                        onCheckedChange={setTimerEnabled}
+                      />
+                      <Label htmlFor="per-question-timer">
+                        Enable Per-Question Timer
+                      </Label>
+                    </div>
+                    <div
+                      className={`${
+                        timerEnabled ? "" : "opacity-50 pointer-events-none"
+                      } space-y-2`}
+                    >
+                      <Label>Time per Question (seconds): {timeLimit}</Label>
+                      <Slider
+                        value={[timeLimit]}
+                        onValueChange={(value) => setTimeLimit(value[0])}
+                        min={10}
+                        max={300}
+                        step={10}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
                 </>
-              )}
+              {/* )} */}
             </div>
             <Button
               onClick={handleStartQuiz}

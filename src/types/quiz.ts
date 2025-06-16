@@ -3,6 +3,7 @@ export interface Question {
   id: number;
   question: string;
   options: string[];
+  originalOptions?: string[];
   correctAnswer: number;
   qbankId: string;
   isFlagged?: boolean;
@@ -45,6 +46,8 @@ export interface QuizHistory {
     isCorrect: boolean;
     isFlagged: boolean;
     tags: string[];
+    options?: string[];
+    originalOptions?: string[];
   }[];
 }
 

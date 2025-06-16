@@ -55,7 +55,8 @@ import { useEffect, useState } from 'react';
 
 interface TimerProps {
   timeLimit?: number;           // optional per-question timer
-  sessionTimeLimit?: number;    // optional overall session timer
+  sessionTimeLimit?: number;
+  sessionTimerToggle: boolean;    // optional overall session timer
   isPaused: boolean;
   onTimeUp?: () => void;       // optional callback for question time up
   onQuit?: () => void;         // optional callback for session time up
@@ -64,6 +65,7 @@ interface TimerProps {
 const Timer = ({ 
   timeLimit, 
   sessionTimeLimit, 
+  sessionTimerToggle,
   isPaused, 
   onTimeUp = () => {}, 
   onQuit = () => {} 
@@ -75,7 +77,7 @@ const Timer = ({
 
   // Initialize/reset session timer when sessionTimeLimit changes
   useEffect(() => {
-    if (sessionTimeLimit) {
+    if (sessionTimerToggle) {
       setSessionTimeLeft(sessionTimeLimit * 60);
     }
   }, [sessionTimeLimit]);
@@ -90,6 +92,7 @@ const Timer = ({
   // Session timer countdown - only runs if sessionTimeLimit is provided
   useEffect(() => {
     if (sessionTimeLimit === undefined) return;
+    if (sessionTimerToggle === false) return;
     
     let sessionTimer: NodeJS.Timeout;
 
@@ -137,7 +140,7 @@ const Timer = ({
 
   return (
     <div className="flex flex-col gap-1 text-lg font-medium text-foreground dark:text-gray-200 select-none">
-      {sessionTimeLimit !== undefined && (
+      {sessionTimerToggle !== false && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Session Timer:</span>
           <span className={sessionTimeLeft <= 10 ? 'text-red-500' : ''}>

@@ -370,31 +370,68 @@ export const useQuiz = ({ onQuizComplete, onQuizStart, onQuizEnd }: UseQuizProps
       attempts: []
     }));
 
+    // const questionsWithRandomizedOptions = selectedQuestions.map(question => {
+    //   const questionCopy = { ...question };
+
+    //   if (questionCopy.options && questionCopy.options.length > 0) {
+    //     const optionPairs = questionCopy.options.map((option, index) => ({
+    //       originalIndex: index,
+    //       text: option
+    //     }));
+
+    //     const shuffledPairs = [...optionPairs].sort(() => Math.random() - 0.5);
+    //     questionCopy.originalOptions = [...questionCopy.options];
+    //     questionCopy.options = shuffledPairs.map(pair => pair.text);
+
+    //     const correctOptionPair = shuffledPairs.find(
+    //       pair => pair.originalIndex === questionCopy.correctAnswer
+    //     );
+
+    //     if (correctOptionPair) {
+    //       questionCopy.correctAnswer = shuffledPairs.findIndex(
+    //         pair => pair.originalIndex === questionCopy.correctAnswer
+    //       );
+    //     }
+    //   }
+
+    //   return questionCopy;
+    // });
     const questionsWithRandomizedOptions = selectedQuestions.map(question => {
       const questionCopy = { ...question };
-
+    
       if (questionCopy.options && questionCopy.options.length > 0) {
+        // Save the original order BEFORE shuffling
+        questionCopy.originalOptions = [...questionCopy.options];
+    
+        // Create [originalIndex, text] pairs for tracking
         const optionPairs = questionCopy.options.map((option, index) => ({
           originalIndex: index,
           text: option
         }));
-
+    
+        // Shuffle the pairs
         const shuffledPairs = [...optionPairs].sort(() => Math.random() - 0.5);
+    
+        // Apply shuffled options to the question
         questionCopy.options = shuffledPairs.map(pair => pair.text);
-
+    
+        // Update the correct answer to match the new shuffled index
         const correctOptionPair = shuffledPairs.find(
-          pair => pair.originalIndex === questionCopy.correctAnswer
+          pair => pair.originalIndex === question.correctAnswer
         );
-
+    
         if (correctOptionPair) {
           questionCopy.correctAnswer = shuffledPairs.findIndex(
-            pair => pair.originalIndex === questionCopy.correctAnswer
+            pair => pair.originalIndex === question.correctAnswer
           );
         }
       }
-
+    
       return questionCopy;
     });
+    
+
+    // console.log(questionsWithRandomizedOptions)
 
     setState({
       currentQuestionIndex: 0,
@@ -417,15 +454,32 @@ export const useQuiz = ({ onQuizComplete, onQuizStart, onQuizEnd }: UseQuizProps
     onQuizStart?.();
   };
 
+  // const handleJumpToQuestion = (questionIndex: number) => {
+  //   if(state.timerEnabled) return ;
+  //   if (questionIndex >= 0 && questionIndex < state.currentQuestions.length) {
+  //     setState(prevState => ({
+  //       ...prevState,
+  //       currentQuestionIndex: questionIndex,
+  //       selectedAnswer: null,
+  //       isAnswered: false,
+  //       showExplanation: false
+  //     }));
+  //   }
+  // };
+
   const handleJumpToQuestion = (questionIndex: number) => {
-    if(state.timerEnabled) return ;
+    if (state.timerEnabled) return;
     if (questionIndex >= 0 && questionIndex < state.currentQuestions.length) {
+      const targetQuestion = state.currentQuestions[questionIndex];
+      const hasAttempts = targetQuestion.attempts && targetQuestion.attempts.length > 0;
+      const lastAttempt = hasAttempts ? targetQuestion.attempts[targetQuestion.attempts.length - 1] : null;
+  
       setState(prevState => ({
         ...prevState,
         currentQuestionIndex: questionIndex,
-        selectedAnswer: null,
-        isAnswered: false,
-        showExplanation: false
+        selectedAnswer: lastAttempt?.selectedAnswer ?? null,
+        isAnswered: hasAttempts,
+        showExplanation: prevState.tutorMode && hasAttempts
       }));
     }
   };
@@ -595,20 +649,40 @@ export const useQuiz = ({ onQuizComplete, onQuizStart, onQuizEnd }: UseQuizProps
     onQuizEnd?.();
   };
 
+  // const handleQuizNavigation = (direction: 'prev' | 'next') => {
+  //   if (direction === 'prev' && state.currentQuestionIndex > 0) {
+  //     setState(prev => ({
+  //       ...prev,
+  //       currentQuestionIndex: prev.currentQuestionIndex - 1,
+  //       selectedAnswer: null,
+  //       isAnswered: false,
+  //       showExplanation: false
+  //     }));
+  //   } else if (direction === 'next' && state.currentQuestionIndex < state.currentQuestions.length - 1) {
+  //     proceedToNextQuestion(state.selectedAnswer);
+  //   }
+  // };
+
   const handleQuizNavigation = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && state.currentQuestionIndex > 0) {
+    const newIndex = direction === 'prev' 
+      ? state.currentQuestionIndex - 1 
+      : state.currentQuestionIndex + 1;
+  
+    if (newIndex >= 0 && newIndex < state.currentQuestions.length) {
+      const targetQuestion = state.currentQuestions[newIndex];
+      const hasAttempts = targetQuestion.attempts && targetQuestion.attempts.length > 0;
+      const lastAttempt = hasAttempts ? targetQuestion.attempts[targetQuestion.attempts.length - 1] : null;
+  
       setState(prev => ({
         ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex - 1,
-        selectedAnswer: null,
-        isAnswered: false,
-        showExplanation: false
+        currentQuestionIndex: newIndex,
+        selectedAnswer: lastAttempt?.selectedAnswer ?? null,
+        isAnswered: hasAttempts,
+        showExplanation: prev.tutorMode && hasAttempts
       }));
-    } else if (direction === 'next' && state.currentQuestionIndex < state.currentQuestions.length - 1) {
-      proceedToNextQuestion(state.selectedAnswer);
     }
   };
-
+  
   const handleToggleFlag = () => {
     const currentQuestion = getCurrentQuestion();
     if (!currentQuestion) return;

@@ -42,6 +42,7 @@ interface QuizContentProps {
   showExplanation: boolean;
   timerEnabled: boolean;
   sessionTimeLimit: number;
+  sessionTimerToggle?: boolean;
   timePerQuestion: number;
   isFlagged: boolean;
   onAnswerClick: (index: number) => void;
@@ -56,6 +57,7 @@ interface QuizContentProps {
     attempt: QuestionAttempt;
   }[];  
   tutorMode: boolean;
+  currentQuestions?: Question[];
 }
 
 const QuestionView = lazy(() => import("./QuestionView"));
@@ -71,6 +73,7 @@ const QuizContent = ({
   showExplanation,
   timerEnabled,
   sessionTimeLimit,
+  sessionTimerToggle,
   timePerQuestion,
   isFlagged,
   onAnswerClick,
@@ -81,7 +84,8 @@ const QuizContent = ({
   onToggleFlag,
   onJumpToQuestion,
   questionsWithAttempts,
-  tutorMode
+  tutorMode,
+  currentQuestions
 }: QuizContentProps) => {
   const [showQuitDialog, setShowQuitDialog] = React.useState(false);
   const [answeredQuestions, setAnsweredQuestions] = React.useState<Array<{ questionIndex: number; isCorrect: boolean }>>([]);
@@ -89,6 +93,30 @@ const QuizContent = ({
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const { theme, setTheme } = useTheme();
   const [selectedColor, setSelectedColor] = useState(highlightColors[0]);
+
+  console.log({
+    currentQuestion,
+    currentQuestionIndex,
+    totalQuestions,
+    selectedAnswer,
+    isAnswered,
+    isPaused,
+    showExplanation,
+    timerEnabled,
+    sessionTimeLimit,
+    sessionTimerToggle,
+    timePerQuestion,
+    isFlagged,
+    onAnswerClick,
+    onNavigate,
+    onPause,
+    onQuit,
+    onTimeUp,
+    onToggleFlag,
+    onJumpToQuestion,
+    questionsWithAttempts,
+    tutorMode
+  })
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -153,6 +181,13 @@ const performanceData = useEffect(() => {
     setShowQuitDialog(false);
     onQuit();
   };
+
+  // const flaggedQuestions = useMemo(() => {
+  //   return currentQuestions.reduce((acc, question, index) => ({
+  //     ...acc,
+  //     [index]: question.isFlagged || false
+  //   }), {});
+  // }, [currentQuestions]);
 
   return (
     <div className="bg-background dark:bg-background min-h-screen">
@@ -264,7 +299,8 @@ const performanceData = useEffect(() => {
           currentQuestionIndex={currentQuestionIndex}
           answeredQuestions={tutorMode? answeredQuestions: []}
           onQuestionClick={timerEnabled ? ()=>{} : handleQuestionClick}
-          currentQuestion={currentQuestion}
+          // currentQuestion={currentQuestion}
+          currentQuestions={currentQuestions}
           // currentQuestions={currentQuestions}
         />
       </div>
@@ -296,6 +332,7 @@ const performanceData = useEffect(() => {
           isFlagged={isFlagged}
           timerEnabled={timerEnabled}
           sessionTimeLimit={sessionTimeLimit}
+          sessionTimerToggle={sessionTimerToggle}
           timeLimit={timePerQuestion}
           onTimeUp={onTimeUp}
           onNavigate={onNavigate}
