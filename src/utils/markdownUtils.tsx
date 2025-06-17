@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon, Play, Pause, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -8,26 +8,62 @@ import { Button } from '@/components/ui/button';
 export const renderMarkdown = (text: string, onImageClick?: (imageName: string) => void): React.ReactNode[] => {
   if (!text) return [null];
 
-  // Extract image references with /path format first
-  const imageReferences: { placeholder: string; imageName: string }[] = [];
+  // Extract both types of image references and audio references
+  const references: { placeholder: string; fileName: string; type: 'button-image' | 'inline-image' | 'audio' }[] = [];
   let processedText = text;
-
-  // Find all standalone image references like /image.png
-  const imageRegex = /\/([^\/\s]+\.(png|jpg|jpeg|gif))/gi;
-  let match;
   let placeholderIndex = 0;
 
-  while ((match = imageRegex.exec(text)) !== null) {
-    const fullMatch = match[0];
-    const imageName = match[1];
-    const placeholder = `__IMAGE_PLACEHOLDER_${placeholderIndex}__`;
+  // Find inline images first (//image.png)
+  const inlineImageRegex = /\/\/([^\/\s]+\.(png|jpg|jpeg|gif))/gi;
+  let match;
 
-    imageReferences.push({
+  while ((match = inlineImageRegex.exec(text)) !== null) {
+    const fullMatch = match[0];
+    const fileName = match[1];
+    const placeholder = `__INLINE_IMAGE_PLACEHOLDER_${placeholderIndex}__`;
+
+    references.push({
       placeholder,
-      imageName
+      fileName,
+      type: 'inline-image'
     });
 
-    // Replace the image reference with a placeholder
+    processedText = processedText.replace(fullMatch, placeholder);
+    placeholderIndex++;
+  }
+
+  // Find clickable image buttons (/image.png) - but not those that are part of //
+  const buttonImageRegex = /(?<!\/)\/([^\/\s]+\.(png|jpg|jpeg|gif))/gi;
+
+  while ((match = buttonImageRegex.exec(processedText)) !== null) {
+    const fullMatch = match[0];
+    const fileName = match[1];
+    const placeholder = `__BUTTON_IMAGE_PLACEHOLDER_${placeholderIndex}__`;
+
+    references.push({
+      placeholder,
+      fileName,
+      type: 'button-image'
+    });
+
+    processedText = processedText.replace(fullMatch, placeholder);
+    placeholderIndex++;
+  }
+
+  // Find audio references (/audio.mp3)
+  const audioRegex = /\/([^\/\s]+\.(mp3|wav|ogg|m4a))/gi;
+
+  while ((match = audioRegex.exec(processedText)) !== null) {
+    const fullMatch = match[0];
+    const fileName = match[1];
+    const placeholder = `__AUDIO_PLACEHOLDER_${placeholderIndex}__`;
+
+    references.push({
+      placeholder,
+      fileName,
+      type: 'audio'
+    });
+
     processedText = processedText.replace(fullMatch, placeholder);
     placeholderIndex++;
   }
@@ -115,12 +151,18 @@ export const renderMarkdown = (text: string, onImageClick?: (imageName: string) 
       formattedText = '<hr />';
     }
 
-    // Replace image placeholders with buttons
-    imageReferences.forEach(ref => {
+    // Replace placeholders
+    references.forEach(ref => {
       if (formattedText.includes(ref.placeholder)) {
-        if (onImageClick) {
-          const buttonHtml = `<button class="inline-flex items-center justify-center p-1 mx-1 bg-muted hover:bg-muted/80 rounded-md" data-image-name="${ref.imageName}" aria-label="View image ${ref.imageName}"><span class="sr-only">View image</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></button>`;
+        if (ref.type === 'inline-image') {
+          const inlineImageHtml = `<div class="inline-image-container" data-image-name="${ref.fileName}"></div>`;
+          formattedText = formattedText.replace(ref.placeholder, inlineImageHtml);
+        } else if (ref.type === 'button-image' && onImageClick) {
+          const buttonHtml = `<button class="inline-flex items-center justify-center p-1 mx-1 bg-muted hover:bg-muted/80 rounded-md" data-image-name="${ref.fileName}" aria-label="View image ${ref.fileName}"><span class="sr-only">View image</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></button>`;
           formattedText = formattedText.replace(ref.placeholder, buttonHtml);
+        } else if (ref.type === 'audio') {
+          const audioButtonHtml = `<button class="inline-flex items-center justify-center p-1 mx-1 bg-muted hover:bg-muted/80 rounded-md" data-audio-name="${ref.fileName}" aria-label="Play audio ${ref.fileName}"><span class="sr-only">Play audio</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="6,3 20,12 6,21"/></svg></button>`;
+          formattedText = formattedText.replace(ref.placeholder, audioButtonHtml);
         } else {
           formattedText = formattedText.replace(ref.placeholder, '');
         }
@@ -128,7 +170,7 @@ export const renderMarkdown = (text: string, onImageClick?: (imageName: string) 
     });
 
     // Return paragraph with processed markdown
-    return React.createElement('div', {
+    const element = React.createElement('div', {
       key: pIndex,
       dangerouslySetInnerHTML: { __html: formattedText },
       className: "mb-2",
@@ -161,7 +203,173 @@ export const renderMarkdown = (text: string, onImageClick?: (imageName: string) 
         }
       }
     });
+
+    // Filter to only pass inline image references to the wrapper
+    const inlineImageRefs = references.filter(ref => ref.type === 'inline-image') as Array<{ placeholder: string; fileName: string; type: 'inline-image' }>;
+    const audioRefs = references.filter(ref => ref.type === 'audio') as Array<{ placeholder: string; fileName: string; type: 'audio' }>;
+    
+    return React.createElement(MediaWrapper, {
+      key: pIndex,
+      element: element,
+      inlineImageReferences: inlineImageRefs,
+      audioReferences: audioRefs,
+      onImageClick
+    });
   });
+};
+
+// Wrapper component to handle inline image and audio rendering
+const MediaWrapper = ({ element, inlineImageReferences, audioReferences, onImageClick }: {
+  element: React.ReactElement;
+  inlineImageReferences: Array<{ placeholder: string; fileName: string; type: 'inline-image' }>;
+  audioReferences: Array<{ placeholder: string; fileName: string; type: 'audio' }>;
+  onImageClick?: (imageName: string) => void;
+}) => {
+  const [mediaMap, setMediaMap] = React.useState<Record<string, string>>({});
+  const [audioMap, setAudioMap] = React.useState<Record<string, string>>({});
+  const [playingAudio, setPlayingAudio] = React.useState<string | null>(null);
+  const [pausedAudio, setPausedAudio] = React.useState<string | null>(null);
+  const [completedAudio, setCompletedAudio] = React.useState<Set<string>>(new Set());
+  const audioElementsRef = React.useRef<{ [key: string]: HTMLAudioElement }>({});
+
+  React.useEffect(() => {
+    // Load media from localStorage
+    try {
+      const savedMedia = localStorage.getItem('mediaLibrary');
+      if (savedMedia) {
+        const mediaItems = JSON.parse(savedMedia) as { name: string; data: string }[];
+        const map: Record<string, string> = {};
+        mediaItems.forEach(item => {
+          map[item.name] = item.data;
+        });
+        setMediaMap(map);
+      }
+
+      const savedAudio = localStorage.getItem('audioLibrary');
+      if (savedAudio) {
+        const audioItems = JSON.parse(savedAudio) as { name: string; data: string }[];
+        const map: Record<string, string> = {};
+        audioItems.forEach(item => {
+          map[item.name] = item.data;
+        });
+        setAudioMap(map);
+      }
+    } catch (err) {
+      console.error("Error loading media/audio library:", err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (Object.keys(mediaMap).length === 0) return;
+
+    // Find and replace inline image containers with actual images
+    const containers = document.querySelectorAll('.inline-image-container');
+    containers.forEach(container => {
+      const imageName = container.getAttribute('data-image-name');
+      if (imageName && mediaMap[imageName]) {
+        const img = document.createElement('img');
+        img.src = mediaMap[imageName];
+        img.alt = imageName;
+        img.loading = 'lazy';
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '8px 0';
+        img.className = 'rounded-md border';
+        
+        // Add click handler for modal if provided
+        if (onImageClick) {
+          img.style.cursor = 'pointer';
+          img.onclick = () => onImageClick(imageName);
+        }
+        
+        container.replaceWith(img);
+      }
+    });
+  }, [mediaMap, onImageClick]);
+
+  React.useEffect(() => {
+    if (Object.keys(audioMap).length === 0) return;
+
+    // Handle audio button functionality
+    const audioButtons = document.querySelectorAll('button[data-audio-name]');
+    audioButtons.forEach(button => {
+      const audioName = button.getAttribute('data-audio-name');
+      if (audioName && audioMap[audioName]) {
+        (button as HTMLButtonElement).onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleAudioPlay(audioName);
+        };
+
+        // Update button icon based on state
+        updateAudioButtonIcon(button as HTMLButtonElement, audioName);
+      }
+    });
+  }, [audioMap, playingAudio, pausedAudio, completedAudio]);
+
+  const handleAudioPlay = (audioName: string) => {
+    // Pause all other audio
+    Object.values(audioElementsRef.current).forEach(audio => {
+      if (!audio.paused) {
+        audio.pause();
+      }
+    });
+
+    if (!audioElementsRef.current[audioName] && audioMap[audioName]) {
+      audioElementsRef.current[audioName] = new Audio(audioMap[audioName]);
+      
+      audioElementsRef.current[audioName].addEventListener('ended', () => {
+        setPlayingAudio(null);
+        setPausedAudio(null);
+        setCompletedAudio(prev => new Set([...prev, audioName]));
+      });
+    }
+
+    const audio = audioElementsRef.current[audioName];
+    if (!audio) return;
+
+    if (playingAudio === audioName) {
+      // Pause current audio
+      audio.pause();
+      setPlayingAudio(null);
+      setPausedAudio(audioName);
+    } else if (pausedAudio === audioName) {
+      // Resume paused audio
+      audio.play();
+      setPlayingAudio(audioName);
+      setPausedAudio(null);
+    } else {
+      // Start new audio or replay
+      audio.currentTime = 0;
+      audio.play();
+      setPlayingAudio(audioName);
+      setPausedAudio(null);
+      setCompletedAudio(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(audioName);
+        return newSet;
+      });
+    }
+  };
+
+  const updateAudioButtonIcon = (button: HTMLButtonElement, audioName: string) => {
+    const svg = button.querySelector('svg');
+    if (!svg) return;
+
+    if (playingAudio === audioName) {
+      // Show pause icon
+      svg.innerHTML = '<rect x="4" y="4" width="6" height="16" rx="1"/><rect x="14" y="4" width="6" height="16" rx="1"/>';
+    } else if (completedAudio.has(audioName)) {
+      // Show replay icon
+      svg.innerHTML = '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>';
+    } else {
+      // Show play icon
+      svg.innerHTML = '<polygon points="6,3 20,12 6,21"/>';
+    }
+  };
+
+  return element;
 };
 
 /**
@@ -170,11 +378,28 @@ export const renderMarkdown = (text: string, onImageClick?: (imageName: string) 
 export const extractImageReferences = (text: string): string[] => {
   if (!text) return [];
 
-  const imageRegex = /\/([^\/\s]+\.(png|jpg|jpeg|gif))/gi;
+  const imageRegex = /\/\/?([^\/\s]+\.(png|jpg|jpeg|gif))/gi;
   const matches: string[] = [];
   let match;
 
   while ((match = imageRegex.exec(text)) !== null) {
+    matches.push(match[1]);
+  }
+
+  return matches;
+};
+
+/**
+ * Extract all audio references from text
+ */
+export const extractAudioReferences = (text: string): string[] => {
+  if (!text) return [];
+
+  const audioRegex = /\/([^\/\s]+\.(mp3|wav|ogg|m4a))/gi;
+  const matches: string[] = [];
+  let match;
+
+  while ((match = audioRegex.exec(text)) !== null) {
     matches.push(match[1]);
   }
 

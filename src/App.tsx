@@ -20,6 +20,7 @@ import MediaLibrary from "@/components/qbanks/MediaLibrary";
 import { useMetricsInit } from './hooks/use-metrics-init';
 import { initializeMetrics } from "@/utils/metricsUtils";
 import SessionDetail from "./pages/SessionDetail";
+import AudioLibrary from "@/components/qbanks/AudioLibrary";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,8 @@ const App = () => {
     // pushing to history with correct index as stored in questionLibrary 
     const history = {
       ...historyWithShuffling,
+      startTime: historyWithShuffling.startTime || new Date().toISOString(),
+      endTime: historyWithShuffling.endTime || new Date().toISOString(),
       questionAttempts: historyWithShuffling.questionAttempts.map(q => {
         const selectedOptionText = q.options?.[q.selectedAnswer];
         const originalIndex = selectedOptionText != null
@@ -192,6 +195,7 @@ const App = () => {
                       path="/select-qbank"
                       element={<SelectQBank qbanks={qbanks} onSelect={handleQBankSelect} />}
                     />
+                    <Route path="/qbanks/audio" element={<AudioLibrary />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>

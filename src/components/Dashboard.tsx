@@ -15,7 +15,8 @@ import { QuestionFilter } from "@/types/quiz";
 import { useQuiz } from "@/hooks/quiz";
 import { useFullscreen } from "@/hooks/use-fullscreen";
 import { TagPerformanceChart } from "./TagPerformanceChart";
-
+import { calculateAverageTimePerQuestion, formatTime } from "@/utils/timeUtils";
+import { ScoreOverTimeChart } from "./ScoreOverTimeChart";
 interface DashboardProps {
   qbanks: QBank[];
   quizHistory: QuizHistory[];
@@ -219,6 +220,11 @@ const Dashboard = ({
 
   const filteredQuestions = selectedQBank?.questions || [];
   console.log(filteredQuestions.length);
+
+    // Add average time per question calculation
+  const averageTimePerQuestion = useMemo(() => {
+    return calculateAverageTimePerQuestion(quizHistory);
+  }, [quizHistory]);
 
   const handleStartQuiz = () => {
     if (selectedQBank && questionCount > 0) {
@@ -618,7 +624,7 @@ const Dashboard = ({
 
       <div className="mt-6 p-4 bg-card border rounded-lg shadow-sm">
         <h2 className="text-xl font-bold mb-4">Your Performance Summary</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-2">Overall Accuracy</h3>
             <p className="text-2xl font-bold">
@@ -635,12 +641,21 @@ const Dashboard = ({
             <h3 className="text-sm font-medium mb-2">Total Quizzes Taken</h3>
             <p className="text-2xl font-bold">{quizHistory.length}</p>
           </Card>
+                    <Card className="p-4">
+            <h3 className="text-sm font-medium mb-2">Avg Time Per Question</h3>
+            <p className="text-2xl font-bold">{formatTime(averageTimePerQuestion)}</p>
+          </Card>
         </div>
       </div>
 
       {/* Tag Performance Radar Chart */}
-      <div className="my-8">
-        <TagPerformanceChart qbanks={qbanks} quizHistory={quizHistory} />
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="h-80">
+          <TagPerformanceChart qbanks={qbanks} quizHistory={quizHistory} />
+        </div>
+        <div className="h-80">
+          <ScoreOverTimeChart quizHistory={quizHistory} />
+        </div>
       </div>
     </div>
   );

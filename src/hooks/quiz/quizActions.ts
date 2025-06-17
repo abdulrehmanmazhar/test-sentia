@@ -52,6 +52,7 @@ export const initializeQuiz = (
     initialTimeLimit: timeLimit,
     inQuiz: true,
     isPaused: false,
+    quizStartTime: new Date().toISOString(),
   };
 };
 
@@ -59,9 +60,12 @@ export const createQuizHistory = (
   state: QuizState,
   optionIndex: number | null
 ): QuizHistory => {
+    const now = new Date().toISOString();
   const history = {
     id: Date.now().toString(),
-    date: new Date().toISOString(),
+    date: now,
+    startTime: state.quizStartTime || now,
+    endTime: now,
     score: state.score,
     totalQuestions: state.currentQuestions.length,
     qbankId: state.currentQuestions[0].qbankId,
